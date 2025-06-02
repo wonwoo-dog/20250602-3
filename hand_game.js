@@ -1,19 +1,9 @@
 let video;
 let handpose;
 let predictions = [];
-let circleX = 300;
-let circleY = 300;
+let circleX, circleY;
 let score = 0;
 let modelLoaded = false;
-let currentQuestion = 0;
-let questions = [
-  { question: "What is the purpose of educational technology?", options: ["Enhance learning", "Entertainment", "Marketing"], answer: 0 },
-  { question: "Which tool is used for creating digital presentations?", options: ["Photoshop", "PowerPoint", "Excel"], answer: 1 },
-  { question: "What does LMS stand for?", options: ["Learning Management System", "Library Management Software", "Language Modeling System"], answer: 0 },
-  { question: "Which programming language is commonly taught to beginners?", options: ["Python", "C++", "Assembly"], answer: 0 },
-  { question: "What is the benefit of gamification in education?", options: ["Improves engagement", "Reduces learning", "Increases costs"], answer: 0 }
-];
-let questionAnswered = false;
 
 function setup() {
   createCanvas(640, 480);
@@ -26,6 +16,10 @@ function setup() {
   handpose.on("predict", results => {
     predictions = results;
   });
+
+  // 初始化目標圓形位置
+  circleX = random(50, width - 50);
+  circleY = random(50, height - 50);
 }
 
 function modelReady() {
@@ -50,32 +44,11 @@ function draw() {
     return;
   }
 
-  if (currentQuestion < questions.length) {
-    displayQuestion();
-    checkAnswer();
-  } else {
-    fill(0);
-    textSize(32);
-    text("Game Over! Your score: " + score, 10, height / 2);
-  }
-}
+  // 繪製目標圓形
+  fill(255, 0, 0);
+  ellipse(circleX, circleY, 50);
 
-function displayQuestion() {
-  let q = questions[currentQuestion];
-  fill(0);
-  textSize(24);
-  text(q.question, 10, 50);
-
-  for (let i = 0; i < q.options.length; i++) {
-    fill(255, 0, 0);
-    ellipse(100 + i * 200, 200, 50);
-    fill(0);
-    textSize(16);
-    text(q.options[i], 80 + i * 200, 210);
-  }
-}
-
-function checkAnswer() {
+  // 繪製手勢追蹤結果
   if (predictions.length > 0) {
     let hand = predictions[0];
     let indexFinger = hand.landmarks[8]; // 食指尖端座標
@@ -86,20 +59,16 @@ function checkAnswer() {
     fill(0, 255, 0);
     ellipse(x, y, 20);
 
-    // 檢查是否選擇答案
-    for (let i = 0; i < questions[currentQuestion].options.length; i++) {
-      let optionX = 100 + i * 200;
-      let optionY = 200;
-      if (dist(x, y, optionX, optionY) < 25 && !questionAnswered) {
-        questionAnswered = true;
-        if (i === questions[currentQuestion].answer) {
-          score++;
-        }
-        setTimeout(() => {
-          currentQuestion++;
-          questionAnswered = false;
-        }, 1000);
-      }
+    // 檢查食指是否碰到目標圓形
+    if (dist(x, y, circleX, circleY) < 25) {
+      score++;
+      circleX = random(50, width - 50);
+      circleY = random(50, height - 50);
     }
   }
+
+  // 顯示分數
+  fill(0);
+  textSize(24);
+  text(`Score: ${score}`, 10, 30);
 }
