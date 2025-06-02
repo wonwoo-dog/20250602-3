@@ -1,9 +1,16 @@
 let video;
 let handpose;
 let predictions = [];
-let circleX, circleY;
-let score = 0;
-let modelLoaded = false;
+
+let questions = [
+  "什麼是教育科技？",
+  "教育科技的例子？",
+  "教育科技的優點？",
+  "教育科技有挑戰嗎？",
+  "你最喜歡哪種教育科技？"
+];
+let currentQuestion = 0;
+let answered = false;
 
 function setup() {
   createCanvas(640, 480);
@@ -11,64 +18,52 @@ function setup() {
   video.size(width, height);
   video.hide();
 
-  // 初始化手勢追蹤模型
-  handpose = ml5.handpose(video, modelReady, modelError);
+  handpose = ml5.handpose(video, modelReady);
   handpose.on("predict", results => {
     predictions = results;
   });
-
-  // 初始化目標圓形位置
-  circleX = random(50, width - 50);
-  circleY = random(50, height - 50);
 }
 
 function modelReady() {
-  console.log("Handpose model loaded!");
-  modelLoaded = true;
-}
-
-function modelError(err) {
-  console.error("Error loading Handpose model:", err);
+  console.log("Handpose model ready!");
 }
 
 function draw() {
-  background(220);
-
-  // 顯示攝影機影像
   image(video, 0, 0, width, height);
 
-  if (!modelLoaded) {
-    fill(255, 0, 0);
-    textSize(24);
-    text("Loading model, please wait...", 10, height / 2);
-    return;
-  }
-
-  // 繪製目標圓形
-  fill(255, 0, 0);
-  ellipse(circleX, circleY, 50);
-
-  // 繪製手勢追蹤結果
   if (predictions.length > 0) {
-    let hand = predictions[0];
-    let indexFinger = hand.landmarks[8]; // 食指尖端座標
-    let x = indexFinger[0];
-    let y = indexFinger[1];
-
-    // 繪製食指尖端
-    fill(0, 255, 0);
-    ellipse(x, y, 20);
-
-    // 檢查食指是否碰到目標圓形
-    if (dist(x, y, circleX, circleY) < 25) {
-      score++;
-      circleX = random(50, width - 50);
-      circleY = random(50, height - 50);
-    }
+    drawHand(predictions[0].landmarks);
+    checkGesture(predictions[0].landmarks);
   }
 
-  // 顯示分數
-  fill(0);
-  textSize(24);
-  text(`Score: ${score}`, 10, 30);
+  fill(255);
+  textSize(20);
+  text(questions[currentQuestion], 10, height - 30);
+}
+
+function drawHand(landmarks) {
+  for (let i = 0; i < landmarks.length; i++) {
+    const [x, y] = landmarks[i];
+    fill(0, 255, 0);
+    ellipse(x, y, 10, 10);
+  }
+}
+
+function checkGesture(landmarks) {
+  if (answered) return;
+
+  // 偵測比 "大拇指向上" 手勢
+  let thumbTip = landmarks[4];
+  let indexTip = landmarks[8];
+
+  if (thumbTip[1] < indexTip[1] - 50) {
+    answered = true;
+    setTimeout(() => {
+      currentQuestion++;
+      if (currentQuestion >= questions.length) {
+        currentQuestion = 0;
+      }
+      answered = false;
+    }, 2000);
+  }
 }
